@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AshaConnect - PHC Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>AshaConnect</h1>
+                <p>Primary Health Centre Dashboard</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboardScreen" class="dashboard-container" style="display: none;">
+        <!-- Top Navigation Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <button class="hamburger" id="hamburgerBtn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <h2 class="logo">AshaConnect</h2>
+            </div>
+            <div class="header-right">
+                <div class="language-selector">
+                    <select id="languageSelect">
+                        <option value="en">English</option>
+                        <option value="hi">हिंदी</option>
+                        <option value="ta">தமிழ்</option>
+                    </select>
+                </div>
+                <div class="notification-container">
+                    <button class="notification-bell" id="notificationBell">
+                        <span class="bell-icon">🔔</span>
+                        <span class="notification-badge" id="notificationBadge">3</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="notification-header">
+                            <h3>Notifications</h3>
+                            <button class="mark-all-read">Mark all as read</button>
+                        </div>
+                        <div class="notification-list" id="notificationList">
+                            <!-- Notifications will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="user-profile">
+                    <span class="user-name">Admin</span>
+                    <div class="user-avatar">A</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard-body">
+            <!-- Left Sidebar -->
+            <nav class="sidebar" id="sidebar">
+                <ul class="sidebar-menu">
+                    <li class="menu-item active" data-page="dashboard">
+                        <span class="menu-icon">📊</span>
+                        <span class="menu-text">Dashboard</span>
+                    </li>
+                    <li class="menu-item" data-page="patients">
+                        <span class="menu-icon">👥</span>
+                        <span class="menu-text">Patient Analytics</span>
+                    </li>
+                    <li class="menu-item" data-page="asha">
+                        <span class="menu-icon">👩‍⚕️</span>
+                        <span class="menu-text">ASHA Workers</span>
+                    </li>
+                    <li class="menu-item" data-page="reports">
+                        <span class="menu-icon">📈</span>
+                        <span class="menu-text">Reports & Analytics</span>
+                    </li>
+                    <li class="menu-item" data-page="inventory">
+                        <span class="menu-icon">📦</span>
+                        <span class="menu-text">Inventory</span>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main id="content" class="main-content">
+                <!-- Content will be dynamically loaded here -->
+            </main>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

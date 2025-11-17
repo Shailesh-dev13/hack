@@ -1,0 +1,940 @@
+// ============================================
+// GLOBAL STATE & DATA
+// ============================================
+let currentPage = 'dashboard';
+let notifications = [
+    { id: 1, title: 'New patient registered', message: 'Patient ID: P001 registered in Village A', time: '2 hours ago', read: false },
+    { id: 2, title: 'Low stock alert', message: 'Paracetamol stock is below threshold', time: '5 hours ago', read: false },
+    { id: 3, title: 'Follow-up reminder', message: '5 patients need follow-up visits today', time: '1 day ago', read: false },
+    { id: 4, title: 'ASHA worker sync', message: 'ASHA worker Priya completed data sync', time: '2 days ago', read: true },
+    { id: 5, title: 'Immunization due', message: '10 children due for vaccination this week', time: '3 days ago', read: true }
+];
+
+let patients = [
+    { id: 'P001', name: 'Rajesh Kumar', age: 45, village: 'Village A', asha: 'Priya Sharma', lastVisit: '2024-01-15', risk: 'high' },
+    { id: 'P002', name: 'Sunita Devi', age: 28, village: 'Village B', asha: 'Meera Singh', lastVisit: '2024-01-14', risk: 'medium' },
+    { id: 'P003', name: 'Amit Patel', age: 35, village: 'Village A', asha: 'Priya Sharma', lastVisit: '2024-01-13', risk: 'low' },
+    { id: 'P004', name: 'Kavita Yadav', age: 32, village: 'Village C', asha: 'Anita Verma', lastVisit: '2024-01-12', risk: 'medium' },
+    { id: 'P005', name: 'Ramesh Singh', age: 55, village: 'Village B', asha: 'Meera Singh', lastVisit: '2024-01-11', risk: 'high' },
+    { id: 'P006', name: 'Lakshmi Nair', age: 25, village: 'Village A', asha: 'Priya Sharma', lastVisit: '2024-01-10', risk: 'low' },
+    { id: 'P007', name: 'Vikram Reddy', age: 40, village: 'Village C', asha: 'Anita Verma', lastVisit: '2024-01-09', risk: 'medium' },
+    { id: 'P008', name: 'Geeta Sharma', age: 30, village: 'Village B', asha: 'Meera Singh', lastVisit: '2024-01-08', risk: 'low' }
+];
+
+let ashaWorkers = [
+    { id: 'A001', name: 'Priya Sharma', village: 'Village A', followUp: 95, households: 120, pending: 5, lastSync: '2024-01-15 10:30', status: 'online' },
+    { id: 'A002', name: 'Meera Singh', village: 'Village B', followUp: 88, households: 110, pending: 12, lastSync: '2024-01-15 09:15', status: 'online' },
+    { id: 'A003', name: 'Anita Verma', village: 'Village C', followUp: 92, households: 105, pending: 8, lastSync: '2024-01-14 18:00', status: 'offline' },
+    { id: 'A004', name: 'Sushma Devi', village: 'Village D', followUp: 75, households: 95, pending: 20, lastSync: '2024-01-13 14:20', status: 'nosync' },
+    { id: 'A005', name: 'Rekha Patel', village: 'Village E', followUp: 90, households: 100, pending: 10, lastSync: '2024-01-15 11:00', status: 'online' }
+];
+
+let inventory = [
+    { id: 'I001', name: 'Paracetamol 500mg', category: 'Medicines', stock: 45, threshold: 50, lastRestocked: '2024-01-10' },
+    { id: 'I002', name: 'ORS Packets', category: 'Supplies', stock: 120, threshold: 100, lastRestocked: '2024-01-12' },
+    { id: 'I003', name: 'Antibiotics', category: 'Medicines', stock: 30, threshold: 40, lastRestocked: '2024-01-08' },
+    { id: 'I004', name: 'Bandages', category: 'Supplies', stock: 200, threshold: 150, lastRestocked: '2024-01-14' },
+    { id: 'I005', name: 'Vaccine Vials', category: 'Vaccines', stock: 0, threshold: 20, lastRestocked: '2024-01-05' },
+    { id: 'I006', name: 'Syringes', category: 'Supplies', stock: 80, threshold: 100, lastRestocked: '2024-01-11' },
+    { id: 'I007', name: 'Thermometers', category: 'Equipment', stock: 15, threshold: 20, lastRestocked: '2024-01-09' }
+];
+
+let languageLabels = {
+    en: {
+        dashboard: 'Dashboard',
+        patients: 'Patient Analytics',
+        asha: 'ASHA Workers',
+        reports: 'Reports & Analytics',
+        inventory: 'Inventory',
+        totalPatients: 'Total Patients',
+        activeAsha: 'Active ASHA Workers',
+        followUpCompletion: 'Follow-up Completion',
+        pendingHighPriority: 'Pending High Priority Cases'
+    },
+    hi: {
+        dashboard: 'डैशबोर्ड',
+        patients: 'रोगी विश्लेषण',
+        asha: 'आशा कार्यकर्ता',
+        reports: 'रिपोर्ट और विश्लेषण',
+        inventory: 'इन्वेंटरी',
+        totalPatients: 'कुल रोगी',
+        activeAsha: 'सक्रिय आशा कार्यकर्ता',
+        followUpCompletion: 'फॉलो-अप पूर्णता',
+        pendingHighPriority: 'लंबित उच्च प्राथमिकता के मामले'
+    },
+    ta: {
+        dashboard: 'டாஷ்போர்டு',
+        patients: 'நோயாளி பகுப்பாய்வு',
+        asha: 'ஆஷா தொழிலாளர்கள்',
+        reports: 'அறிக்கைகள் மற்றும் பகுப்பாய்வு',
+        inventory: 'சரக்கு',
+        totalPatients: 'மொத்த நோயாளிகள்',
+        activeAsha: 'செயலில் உள்ள ஆஷா தொழிலாளர்கள்',
+        followUpCompletion: 'பின்தொடர்தல் நிறைவு',
+        pendingHighPriority: 'நிலுவையில் உள்ள உயர் முன்னுரிமை வழக்குகள்'
+    }
+};
+
+let currentLanguage = 'en';
+
+// ============================================
+// INITIALIZATION
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLogin();
+    initializeDashboard();
+    renderNotifications();
+});
+
+// ============================================
+// LOGIN FUNCTIONALITY
+// ============================================
+function initializeLogin() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+}
+
+function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    // Validation
+    if (!username || !password) {
+        alert('Please enter both username and password');
+        return;
+    }
+
+    // Hide login, show dashboard
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboardScreen').style.display = 'flex';
+    
+    // Load dashboard
+    loadPage(renderDashboard);
+}
+
+// ============================================
+// DASHBOARD INITIALIZATION
+// ============================================
+function initializeDashboard() {
+    // Hamburger menu
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+        });
+    }
+
+    // Sidebar navigation
+    const menuItems = document.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const page = this.getAttribute('data-page');
+            if (page) {
+                // Update active state
+                menuItems.forEach(mi => mi.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Close sidebar on mobile
+                sidebar.classList.remove('open');
+                
+                // Load page
+                currentPage = page;
+                switchPage(page);
+            }
+        });
+    });
+
+    // Notification bell
+    const notificationBell = document.getElementById('notificationBell');
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    
+    if (notificationBell) {
+        notificationBell.addEventListener('click', function(e) {
+            e.stopPropagation();
+            notificationDropdown.classList.toggle('show');
+        });
+    }
+
+    // Close notification dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (notificationDropdown && !notificationBell.contains(e.target) && !notificationDropdown.contains(e.target)) {
+            notificationDropdown.classList.remove('show');
+        }
+    });
+
+    // Language selector
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.addEventListener('change', function() {
+            currentLanguage = this.value;
+            updateLanguageLabels();
+        });
+    }
+
+    // Mark all as read
+    const markAllRead = document.querySelector('.mark-all-read');
+    if (markAllRead) {
+        markAllRead.addEventListener('click', function() {
+            notifications.forEach(n => n.read = true);
+            renderNotifications();
+        });
+    }
+}
+
+// ============================================
+// PAGE SWITCHING
+// ============================================
+function switchPage(page) {
+    switch(page) {
+        case 'dashboard':
+            loadPage(renderDashboard);
+            break;
+        case 'patients':
+            loadPage(renderPatientAnalytics);
+            break;
+        case 'asha':
+            loadPage(renderAshaAnalytics);
+            break;
+        case 'reports':
+            loadPage(renderReports);
+            break;
+        case 'inventory':
+            loadPage(renderInventory);
+            break;
+        default:
+            loadPage(renderDashboard);
+    }
+}
+
+function loadPage(renderer) {
+    const content = document.getElementById('content');
+    if (content) {
+        content.innerHTML = '';
+        renderer();
+    }
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+function renderNotifications() {
+    const notificationList = document.getElementById('notificationList');
+    const notificationBadge = document.getElementById('notificationBadge');
+    
+    if (!notificationList) return;
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+    if (notificationBadge) {
+        notificationBadge.textContent = unreadCount;
+        notificationBadge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+
+    notificationList.innerHTML = '';
+    notifications.forEach(notification => {
+        const item = document.createElement('div');
+        item.className = `notification-item ${!notification.read ? 'unread' : ''}`;
+        item.innerHTML = `
+            <div class="notification-title">${notification.title}</div>
+            <div class="notification-time">${notification.time}</div>
+        `;
+        item.addEventListener('click', function() {
+            notification.read = true;
+            renderNotifications();
+        });
+        notificationList.appendChild(item);
+    });
+}
+
+// ============================================
+// LANGUAGE SYSTEM
+// ============================================
+function updateLanguageLabels() {
+    const labels = languageLabels[currentLanguage];
+    // Update menu items
+    const menuItems = document.querySelectorAll('.menu-item');
+    const menuTexts = ['dashboard', 'patients', 'asha', 'reports', 'inventory'];
+    menuItems.forEach((item, index) => {
+        const textSpan = item.querySelector('.menu-text');
+        if (textSpan && labels[menuTexts[index]]) {
+            textSpan.textContent = labels[menuTexts[index]];
+        }
+    });
+}
+
+// ============================================
+// DASHBOARD OVERVIEW
+// ============================================
+function renderDashboard() {
+    const content = document.getElementById('content');
+    const labels = languageLabels[currentLanguage];
+    
+    content.innerHTML = `
+        <div class="page-header">
+            <h1>Dashboard Overview</h1>
+            <p>Welcome to AshaConnect PHC Dashboard</p>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Patients</div>
+                <div class="metric-value">${patients.length}</div>
+                <div class="metric-change">+12% from last month</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active ASHA Workers</div>
+                <div class="metric-value">${ashaWorkers.filter(a => a.status === 'online').length}</div>
+                <div class="metric-change">${ashaWorkers.length} total workers</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Follow-up Completion</div>
+                <div class="metric-value">${Math.round(ashaWorkers.reduce((sum, a) => sum + a.followUp, 0) / ashaWorkers.length)}%</div>
+                <div class="metric-change">+5% improvement</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Pending High Priority Cases</div>
+                <div class="metric-value">${patients.filter(p => p.risk === 'high').length}</div>
+                <div class="metric-change" style="color: var(--danger);">Requires attention</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Immunization Trend (Last 6 Months)</div>
+            <canvas id="immunizationChart"></canvas>
+        </div>
+
+        <div class="activity-list">
+            <h2 style="margin-bottom: 1rem; color: var(--text-dark);">Recent Activity</h2>
+            ${renderRecentActivity()}
+        </div>
+    `;
+
+    // Render chart
+    setTimeout(() => {
+        renderImmunizationChart();
+    }, 100);
+}
+
+function renderRecentActivity() {
+    const activities = [
+        { icon: '👤', title: 'New patient registered', time: '2 hours ago' },
+        { icon: '💉', title: 'Immunization completed for 5 children', time: '4 hours ago' },
+        { icon: '📋', title: 'Follow-up visit completed', time: '6 hours ago' },
+        { icon: '👩‍⚕️', title: 'ASHA worker data sync completed', time: '1 day ago' },
+        { icon: '📦', title: 'Inventory restocked', time: '2 days ago' }
+    ];
+
+    return activities.map(activity => `
+        <div class="activity-item">
+            <div class="activity-icon">${activity.icon}</div>
+            <div class="activity-content">
+                <div class="activity-title">${activity.title}</div>
+                <div class="activity-time">${activity.time}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderImmunizationChart() {
+    const ctx = document.getElementById('immunizationChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
+            datasets: [{
+                label: 'Immunizations',
+                data: [120, 135, 150, 145, 160, 175],
+                borderColor: '#2b6cb0',
+                backgroundColor: 'rgba(43, 108, 176, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// ============================================
+// PATIENT ANALYTICS
+// ============================================
+let filteredPatients = [...patients];
+
+function renderPatientAnalytics() {
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="page-header">
+            <h1>Patient Analytics</h1>
+            <p>Manage and analyze patient data</p>
+        </div>
+
+        <div class="filters-section">
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="patientSearch" placeholder="Search by name, ID, or village...">
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="high">High Risk</option>
+                    <option value="medium">Medium Risk</option>
+                    <option value="low">Low Risk</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Village</label>
+                <select id="villageFilter">
+                    <option value="">All Villages</option>
+                    <option value="Village A">Village A</option>
+                    <option value="Village B">Village B</option>
+                    <option value="Village C">Village C</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="patient-table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Age</th>
+                        <th>Village</th>
+                        <th>Assigned ASHA</th>
+                        <th>Last Visit</th>
+                        <th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody id="patientTableBody">
+                    ${renderPatientTable()}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // Add event listeners
+    document.getElementById('patientSearch').addEventListener('input', filterPatients);
+    document.getElementById('statusFilter').addEventListener('change', filterPatients);
+    document.getElementById('villageFilter').addEventListener('change', filterPatients);
+}
+
+function renderPatientTable() {
+    return filteredPatients.map(patient => `
+        <tr onclick="showPatientDetails('${patient.id}')">
+            <td>${patient.id}</td>
+            <td>${patient.name}</td>
+            <td>${patient.age}</td>
+            <td>${patient.village}</td>
+            <td>${patient.asha}</td>
+            <td>${patient.lastVisit}</td>
+            <td>
+                <span class="risk-${patient.risk}">
+                    ${patient.risk.charAt(0).toUpperCase() + patient.risk.slice(1)}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterPatients() {
+    const searchTerm = document.getElementById('patientSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const villageFilter = document.getElementById('villageFilter').value;
+
+    filteredPatients = patients.filter(patient => {
+        const matchesSearch = !searchTerm || 
+            patient.name.toLowerCase().includes(searchTerm) ||
+            patient.id.toLowerCase().includes(searchTerm) ||
+            patient.village.toLowerCase().includes(searchTerm);
+        
+        const matchesStatus = !statusFilter || patient.risk === statusFilter;
+        const matchesVillage = !villageFilter || patient.village === villageFilter;
+
+        return matchesSearch && matchesStatus && matchesVillage;
+    });
+
+    document.getElementById('patientTableBody').innerHTML = renderPatientTable();
+}
+
+function showPatientDetails(patientId) {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Patient Details</h2>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-row">
+                    <div class="modal-field">
+                        <label>Patient ID</label>
+                        <span>${patient.id}</span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Name</label>
+                        <span>${patient.name}</span>
+                    </div>
+                </div>
+                <div class="modal-row">
+                    <div class="modal-field">
+                        <label>Age</label>
+                        <span>${patient.age} years</span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Village</label>
+                        <span>${patient.village}</span>
+                    </div>
+                </div>
+                <div class="modal-row">
+                    <div class="modal-field">
+                        <label>Assigned ASHA Worker</label>
+                        <span>${patient.asha}</span>
+                    </div>
+                    <div class="modal-field">
+                        <label>Last Visit</label>
+                        <span>${patient.lastVisit}</span>
+                    </div>
+                </div>
+                <div class="modal-row">
+                    <div class="modal-field">
+                        <label>Risk Level</label>
+                        <span class="risk-${patient.risk}">
+                            ${patient.risk.charAt(0).toUpperCase() + patient.risk.slice(1)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// Make function globally accessible
+window.showPatientDetails = showPatientDetails;
+
+// ============================================
+// ASHA WORKER ANALYTICS
+// ============================================
+function renderAshaAnalytics() {
+    const content = document.getElementById('content');
+    const onlineCount = ashaWorkers.filter(a => a.status === 'online').length;
+    const offlineCount = ashaWorkers.filter(a => a.status === 'offline').length;
+    const avgFollowUp = Math.round(ashaWorkers.reduce((sum, a) => sum + a.followUp, 0) / ashaWorkers.length);
+
+    content.innerHTML = `
+        <div class="page-header">
+            <h1>ASHA Worker Analytics</h1>
+            <p>Monitor ASHA worker performance and status</p>
+        </div>
+
+        <div class="asha-summary-grid">
+            <div class="asha-summary-card">
+                <div class="asha-summary-value">${ashaWorkers.length}</div>
+                <div class="asha-summary-label">Total ASHAs</div>
+            </div>
+            <div class="asha-summary-card">
+                <div class="asha-summary-value">${onlineCount}</div>
+                <div class="asha-summary-label">Online</div>
+            </div>
+            <div class="asha-summary-card">
+                <div class="asha-summary-value">${offlineCount}</div>
+                <div class="asha-summary-label">Offline</div>
+            </div>
+            <div class="asha-summary-card">
+                <div class="asha-summary-value">${avgFollowUp}%</div>
+                <div class="asha-summary-label">Avg Follow-up %</div>
+            </div>
+        </div>
+
+        <div class="chart-container" style="margin-bottom: 2rem;">
+            <div class="chart-title">Top 5 ASHA Workers by Follow-up Completion</div>
+            <canvas id="ashaChart"></canvas>
+        </div>
+
+        <div class="patient-table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Village</th>
+                        <th>Follow-up %</th>
+                        <th>Households Done</th>
+                        <th>Pending Tasks</th>
+                        <th>Last Sync Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${renderAshaTable()}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // Render chart
+    setTimeout(() => {
+        renderAshaChart();
+    }, 100);
+}
+
+function renderAshaTable() {
+    return ashaWorkers.map(asha => {
+        const statusClass = `badge-${asha.status}`;
+        const statusText = asha.status === 'online' ? 'Online' : 
+                          asha.status === 'offline' ? 'Offline' : 'No Sync';
+        
+        return `
+            <tr>
+                <td>${asha.name}</td>
+                <td>${asha.village}</td>
+                <td>${asha.followUp}%</td>
+                <td>${asha.households}</td>
+                <td>${asha.pending}</td>
+                <td>${asha.lastSync}</td>
+                <td><span class="badge ${statusClass}">${statusText}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderAshaChart() {
+    const ctx = document.getElementById('ashaChart');
+    if (!ctx) return;
+
+    const topAshas = [...ashaWorkers].sort((a, b) => b.followUp - a.followUp).slice(0, 5);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: topAshas.map(a => a.name),
+            datasets: [{
+                label: 'Follow-up Completion %',
+                data: topAshas.map(a => a.followUp),
+                backgroundColor: '#2b6cb0'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+}
+
+// ============================================
+// REPORTS & ANALYTICS
+// ============================================
+function renderReports() {
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="page-header">
+            <h1>Reports & Analytics</h1>
+            <p>Generate comprehensive reports and analytics</p>
+        </div>
+
+        <div class="report-filters">
+            <div class="filter-group">
+                <label>Time Period</label>
+                <select id="timePeriod">
+                    <option value="daily">Daily</option>
+                    <option value="weekly" selected>Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Indicator Type</label>
+                <select id="indicatorType">
+                    <option value="immunization" selected>Immunization</option>
+                    <option value="maternal">Maternal Health</option>
+                    <option value="chronic">Chronic Disease</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-primary" onclick="updateReport()">Update Report</button>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title" id="reportChartTitle">Immunization Report (Weekly)</div>
+            <canvas id="reportChart"></canvas>
+        </div>
+
+        <div class="export-buttons">
+            <button class="btn btn-export" onclick="exportToExcel()">Export to Excel</button>
+            <button class="btn btn-export-pdf" onclick="exportToPDF()">Export to PDF</button>
+        </div>
+    `;
+
+    // Initial chart render
+    setTimeout(() => {
+        updateReport();
+    }, 100);
+}
+
+function updateReport() {
+    const timePeriod = document.getElementById('timePeriod').value;
+    const indicatorType = document.getElementById('indicatorType').value;
+    const chartTitle = document.getElementById('reportChartTitle');
+    
+    let title = '';
+    let labels = [];
+    let data = [];
+
+    if (indicatorType === 'immunization') {
+        title = `Immunization Report (${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)})`;
+        if (timePeriod === 'daily') {
+            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            data = [25, 30, 28, 35, 32, 20, 15];
+        } else if (timePeriod === 'weekly') {
+            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+            data = [120, 135, 150, 145];
+        } else {
+            labels = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+            data = [500, 540, 600, 580, 640, 700];
+        }
+    } else if (indicatorType === 'maternal') {
+        title = `Maternal Health Report (${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)})`;
+        if (timePeriod === 'daily') {
+            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            data = [5, 8, 6, 10, 7, 4, 3];
+        } else if (timePeriod === 'weekly') {
+            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+            data = [40, 45, 50, 48];
+        } else {
+            labels = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+            data = [180, 200, 220, 210, 230, 250];
+        }
+    } else {
+        title = `Chronic Disease Report (${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)})`;
+        if (timePeriod === 'daily') {
+            labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            data = [12, 15, 14, 18, 16, 10, 8];
+        } else if (timePeriod === 'weekly') {
+            labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+            data = [90, 95, 100, 98];
+        } else {
+            labels = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+            data = [400, 420, 450, 440, 460, 480];
+        }
+    }
+
+    chartTitle.textContent = title;
+
+    const ctx = document.getElementById('reportChart');
+    if (ctx) {
+        // Destroy existing chart if it exists
+        if (window.reportChartInstance) {
+            window.reportChartInstance.destroy();
+        }
+
+        window.reportChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: indicatorType.charAt(0).toUpperCase() + indicatorType.slice(1),
+                    data: data,
+                    borderColor: '#2b6cb0',
+                    backgroundColor: 'rgba(43, 108, 176, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+}
+
+function exportToExcel() {
+    const timePeriod = document.getElementById('timePeriod').value;
+    const indicatorType = document.getElementById('indicatorType').value;
+    
+    // Create CSV content
+    let csv = 'Indicator,Value\n';
+    const labels = timePeriod === 'daily' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] :
+                   timePeriod === 'weekly' ? ['Week 1', 'Week 2', 'Week 3', 'Week 4'] :
+                   ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
+    
+    const data = timePeriod === 'daily' ? [25, 30, 28, 35, 32, 20, 15] :
+                 timePeriod === 'weekly' ? [120, 135, 150, 145] :
+                 [500, 540, 600, 580, 640, 700];
+    
+    labels.forEach((label, index) => {
+        csv += `${label},${data[index]}\n`;
+    });
+
+    // Create download link
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${indicatorType}_report_${timePeriod}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function exportToPDF() {
+    window.print();
+}
+
+// Make functions globally accessible
+window.updateReport = updateReport;
+window.exportToExcel = exportToExcel;
+window.exportToPDF = exportToPDF;
+
+// ============================================
+// INVENTORY MANAGEMENT
+// ============================================
+function renderInventory() {
+    const content = document.getElementById('content');
+    const totalItems = inventory.length;
+    const lowStockItems = inventory.filter(i => i.stock < i.threshold && i.stock > 0).length;
+    const outOfStockItems = inventory.filter(i => i.stock === 0).length;
+
+    content.innerHTML = `
+        <div class="page-header">
+            <h1>Inventory & Supply Management</h1>
+            <p>Monitor and manage medical supplies and inventory</p>
+        </div>
+
+        <div class="inventory-summary-grid">
+            <div class="inventory-summary-card">
+                <div class="metric-label">Total Stock Items</div>
+                <div class="metric-value">${totalItems}</div>
+            </div>
+            <div class="inventory-summary-card stock-low">
+                <div class="metric-label">Low Stock Items</div>
+                <div class="metric-value">${lowStockItems}</div>
+            </div>
+            <div class="inventory-summary-card stock-out">
+                <div class="metric-label">Out of Stock</div>
+                <div class="metric-value">${outOfStockItems}</div>
+            </div>
+        </div>
+
+        ${renderLowStockAlerts()}
+
+        <div class="patient-table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Threshold</th>
+                        <th>Status</th>
+                        <th>Last Restocked</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${renderInventoryTable()}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function renderLowStockAlerts() {
+    const lowStock = inventory.filter(i => i.stock <= i.threshold);
+    
+    if (lowStock.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="alerts-section">
+            <h2 style="margin-bottom: 1rem; color: var(--text-dark);">Stock Alerts</h2>
+            ${lowStock.map(item => {
+                const isCritical = item.stock === 0;
+                return `
+                    <div class="alert-item ${isCritical ? 'critical' : ''}">
+                        <strong>${item.name}</strong> - 
+                        Current stock: ${item.stock} units (Threshold: ${item.threshold} units)
+                        ${isCritical ? ' - OUT OF STOCK' : ' - LOW STOCK'}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+function renderInventoryTable() {
+    return inventory.map(item => {
+        let statusClass = 'badge-success';
+        let statusText = 'OK';
+        
+        if (item.stock === 0) {
+            statusClass = 'badge-danger';
+            statusText = 'Out of Stock';
+        } else if (item.stock < item.threshold) {
+            statusClass = 'badge-warning';
+            statusText = 'Low Stock';
+        }
+
+        return `
+            <tr>
+                <td>${item.name}</td>
+                <td>${item.category}</td>
+                <td>${item.stock}</td>
+                <td>${item.threshold}</td>
+                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                <td>${item.lastRestocked}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
