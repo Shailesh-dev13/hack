@@ -64,9 +64,12 @@
                         </div>
                     </div>
                 </div>
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <span class="theme-icon">🌙</span>
+                </button>
                 <div class="user-profile">
-                    <span class="user-name">Admin</span>
-                    <div class="user-avatar">A</div>
+                    <span class="user-name"><span id="adminName">Admin</span></span>
+                    <div class="user-avatar" id="userAvatar">A</div>
                 </div>
             </div>
         </header>
@@ -94,6 +97,10 @@
                     <li class="menu-item" data-page="inventory">
                         <span class="menu-icon">📦</span>
                         <span class="menu-text">Inventory</span>
+                    </li>
+                    <li class="menu-item" data-page="settings">
+                        <span class="menu-icon">⚙️</span>
+                        <span class="menu-text">Settings</span>
                     </li>
                 </ul>
             </nav>

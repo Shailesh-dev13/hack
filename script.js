@@ -76,6 +76,9 @@ let languageLabels = {
 };
 
 let currentLanguage = 'en';
+let currentAdminName = 'Admin';
+let notificationSettings = { enabled: true };
+let themeMode = localStorage.getItem('themeMode') || 'light';
 
 // ============================================
 // INITIALIZATION
@@ -84,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeLogin();
     initializeDashboard();
     renderNotifications();
+    initializeTheme();
 });
 
 // ============================================
@@ -107,9 +111,31 @@ function handleLogin(e) {
         return;
     }
 
-    // Hide login, show dashboard
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('dashboardScreen').style.display = 'flex';
+    // Update admin name
+    currentAdminName = username;
+    const adminNameEl = document.getElementById('adminName');
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (adminNameEl) {
+        adminNameEl.innerText = username;
+    }
+    if (userAvatarEl) {
+        userAvatarEl.textContent = username.charAt(0).toUpperCase();
+    }
+
+    // Hide login, show dashboard with smooth transition
+    const loginScreen = document.getElementById('loginScreen');
+    const dashboardScreen = document.getElementById('dashboardScreen');
+    
+    loginScreen.style.opacity = '0';
+    setTimeout(() => {
+        loginScreen.style.display = 'none';
+        dashboardScreen.style.display = 'flex';
+        dashboardScreen.style.opacity = '0';
+        setTimeout(() => {
+            dashboardScreen.style.opacity = '1';
+            dashboardScreen.style.transition = 'opacity 0.3s ease';
+        }, 10);
+    }, 200);
     
     // Load dashboard
     loadPage(renderDashboard);
@@ -184,6 +210,39 @@ function initializeDashboard() {
             renderNotifications();
         });
     }
+
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+}
+
+// ============================================
+// THEME MANAGEMENT
+// ============================================
+function initializeTheme() {
+    if (themeMode === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeIcon(true);
+    } else {
+        document.body.classList.remove('dark-mode');
+        updateThemeIcon(false);
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    themeMode = isDark ? 'dark' : 'light';
+    localStorage.setItem('themeMode', themeMode);
+    updateThemeIcon(isDark);
+}
+
+function updateThemeIcon(isDark) {
+    const themeIcon = document.querySelector('.theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = isDark ? '☀️' : '🌙';
+    }
 }
 
 // ============================================
@@ -205,6 +264,9 @@ function switchPage(page) {
             break;
         case 'inventory':
             loadPage(renderInventory);
+            break;
+        case 'settings':
+            loadPage(renderSettings);
             break;
         default:
             loadPage(renderDashboard);
@@ -387,6 +449,11 @@ function renderPatientAnalytics() {
             <p>Manage and analyze patient data</p>
         </div>
 
+        <div class="page-header-actions">
+            <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add Patient</button>
+            <button class="btn btn-export" onclick="printPatientSummary()">Print Summary</button>
+        </div>
+
         <div class="filters-section">
             <div class="filter-group">
                 <label>Search</label>
@@ -423,6 +490,7 @@ function renderPatientAnalytics() {
                         <th>Assigned ASHA</th>
                         <th>Last Visit</th>
                         <th>Risk Level</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="patientTableBody">
@@ -440,7 +508,7 @@ function renderPatientAnalytics() {
 
 function renderPatientTable() {
     return filteredPatients.map(patient => `
-        <tr onclick="showPatientDetails('${patient.id}')">
+        <tr>
             <td>${patient.id}</td>
             <td>${patient.name}</td>
             <td>${patient.age}</td>
@@ -451,6 +519,13 @@ function renderPatientTable() {
                 <span class="risk-${patient.risk}">
                     ${patient.risk.charAt(0).toUpperCase() + patient.risk.slice(1)}
                 </span>
+            </td>
+            <td>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;" onclick="event.stopPropagation(); showPatientDetails('${patient.id}')">View</button>
+                    <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;" onclick="event.stopPropagation(); openAssignAshaModal('${patient.id}')">Assign</button>
+                    <button class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;" onclick="event.stopPropagation(); exportPatientRecord('${patient.id}')">Export</button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -539,8 +614,169 @@ function showPatientDetails(patientId) {
     });
 }
 
-// Make function globally accessible
+// Make functions globally accessible
 window.showPatientDetails = showPatientDetails;
+
+function openAddPatientModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Patient</h2>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addPatientForm">
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" id="newPatientName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Age *</label>
+                        <input type="number" id="newPatientAge" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Village *</label>
+                        <select id="newPatientVillage" required>
+                            <option value="">Select Village</option>
+                            <option value="Village A">Village A</option>
+                            <option value="Village B">Village B</option>
+                            <option value="Village C">Village C</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact</label>
+                        <input type="text" id="newPatientContact">
+                    </div>
+                    <div class="form-group">
+                        <label>Assigned ASHA *</label>
+                        <select id="newPatientAsha" required>
+                            <option value="">Select ASHA Worker</option>
+                            ${ashaWorkers.map(a => `<option value="${a.name}">${a.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <select id="newPatientCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="Maternal">Maternal</option>
+                            <option value="Child">Child</option>
+                            <option value="Chronic">Chronic</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="newPatientNotes" rows="3" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 6px; font-family: inherit;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary">Add Patient</button>
+                        <button type="button" class="btn" onclick="this.closest('.modal').remove()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    document.getElementById('addPatientForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newId = 'P' + String(patients.length + 1).padStart(3, '0');
+        const newPatient = {
+            id: newId,
+            name: document.getElementById('newPatientName').value,
+            age: parseInt(document.getElementById('newPatientAge').value),
+            village: document.getElementById('newPatientVillage').value,
+            contact: document.getElementById('newPatientContact').value || 'N/A',
+            asha: document.getElementById('newPatientAsha').value,
+            category: document.getElementById('newPatientCategory').value,
+            notes: document.getElementById('newPatientNotes').value || 'N/A',
+            lastVisit: new Date().toISOString().split('T')[0],
+            risk: 'low'
+        };
+        patients.push(newPatient);
+        filteredPatients = [...patients];
+        modal.remove();
+        renderPatientAnalytics();
+    });
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+function openAssignAshaModal(patientId) {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign ASHA Worker</h2>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem;">Patient: <strong>${patient.name}</strong></p>
+                <div class="form-group">
+                    <label>Select ASHA Worker</label>
+                    <select id="assignAshaSelect">
+                        ${ashaWorkers.map(a => `<option value="${a.name}" ${a.name === patient.asha ? 'selected' : ''}>${a.name} (${a.village})</option>`).join('')}
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button class="btn btn-primary" onclick="assignAshaWorker('${patientId}')">Assign</button>
+                    <button class="btn" onclick="this.closest('.modal').remove()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    window.assignAshaWorker = function(id) {
+        const selectedAsha = document.getElementById('assignAshaSelect').value;
+        const p = patients.find(pat => pat.id === id);
+        if (p) {
+            p.asha = selectedAsha;
+            filteredPatients = [...patients];
+            modal.remove();
+            renderPatientAnalytics();
+        }
+    };
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+function exportPatientRecord(patientId) {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+    
+    const csv = `Patient ID,Name,Age,Village,Assigned ASHA,Last Visit,Risk Level\n${patient.id},${patient.name},${patient.age},${patient.village},${patient.asha},${patient.lastVisit},${patient.risk}`;
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `patient_${patient.id}_${patient.name.replace(/\s+/g, '_')}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function printPatientSummary() {
+    window.print();
+}
+
+window.openAddPatientModal = openAddPatientModal;
+window.openAssignAshaModal = openAssignAshaModal;
+window.exportPatientRecord = exportPatientRecord;
+window.printPatientSummary = printPatientSummary;
 
 // ============================================
 // ASHA WORKER ANALYTICS
@@ -673,6 +909,65 @@ function renderReports() {
             <p>Generate comprehensive reports and analytics</p>
         </div>
 
+        <div class="indicators-dashboard">
+            <div class="indicator-card">
+                <div class="indicator-title">Maternal Health Index</div>
+                <div class="indicator-metrics">
+                    <div class="indicator-metric">
+                        <span class="indicator-label">ANC Coverage %</span>
+                        <span class="indicator-value">85%</span>
+                    </div>
+                    <div class="indicator-metric">
+                        <span class="indicator-label">PNC Completion %</span>
+                        <span class="indicator-value">78%</span>
+                    </div>
+                    <div class="indicator-metric">
+                        <span class="indicator-label">High-risk pregnancies</span>
+                        <span class="indicator-value">12</span>
+                    </div>
+                </div>
+            </div>
+            <div class="indicator-card">
+                <div class="indicator-title">Child Nutrition Score</div>
+                <div class="indicator-metrics">
+                    <div class="indicator-metric">
+                        <span class="indicator-label">Under-5 Weight Score</span>
+                        <span class="indicator-value">72%</span>
+                    </div>
+                    <div class="indicator-metric">
+                        <span class="indicator-label">Stunting Indicator</span>
+                        <span class="indicator-value">18%</span>
+                    </div>
+                    <div class="indicator-metric">
+                        <span class="indicator-label">Immunization Score</span>
+                        <span class="indicator-value">88%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="indicator-card">
+                <div class="indicator-title">Chronic Disease Screening</div>
+                <div class="indicator-metrics">
+                    <div class="indicator-metric">
+                        <span class="indicator-label">Hypertension Screening %</span>
+                        <span class="indicator-value">65%</span>
+                    </div>
+                    <div class="indicator-metric">
+                        <span class="indicator-label">Diabetes Screening %</span>
+                        <span class="indicator-value">58%</span>
+                    </div>
+                    <div class="indicator-metric">
+                        <span class="indicator-label">Total Screenings</span>
+                        <span class="indicator-value">245</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Village-wise Health Progress</div>
+            <canvas id="villageProgressChart"></canvas>
+        </div>
+
         <div class="report-filters">
             <div class="filter-group">
                 <label>Time Period</label>
@@ -709,7 +1004,47 @@ function renderReports() {
     // Initial chart render
     setTimeout(() => {
         updateReport();
+        renderVillageProgressChart();
     }, 100);
+}
+
+function renderVillageProgressChart() {
+    const ctx = document.getElementById('villageProgressChart');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Village A', 'Village B', 'Village C', 'Village D', 'Village E'],
+            datasets: [
+                {
+                    label: 'Health Score',
+                    data: [85, 78, 82, 75, 80],
+                    backgroundColor: '#2b6cb0'
+                },
+                {
+                    label: 'Immunization %',
+                    data: [90, 85, 88, 80, 85],
+                    backgroundColor: '#10b981'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
 }
 
 function updateReport() {
@@ -937,4 +1272,147 @@ function renderInventoryTable() {
         `;
     }).join('');
 }
+
+// ============================================
+// SETTINGS PAGE
+// ============================================
+function renderSettings() {
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="page-header">
+            <h1>Settings</h1>
+            <p>Manage your account and application preferences</p>
+        </div>
+
+        <div class="settings-section">
+            <h2>Profile Settings</h2>
+            <div class="settings-item">
+                <div>
+                    <div class="settings-label">Display Name</div>
+                    <div style="color: var(--grey-text); font-size: 0.875rem; margin-top: 0.25rem;">Change your display name shown in the dashboard</div>
+                </div>
+                <div class="settings-control">
+                    <input type="text" class="settings-input" id="displayNameInput" value="${currentAdminName}">
+                    <button class="btn btn-primary" onclick="updateDisplayName()">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Language Settings</h2>
+            <div class="settings-item">
+                <div>
+                    <div class="settings-label">Application Language</div>
+                    <div style="color: var(--grey-text); font-size: 0.875rem; margin-top: 0.25rem;">Select your preferred language</div>
+                </div>
+                <div class="settings-control">
+                    <select class="settings-input" id="languageSettingSelect" onchange="updateLanguageSetting()">
+                        <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
+                        <option value="hi" ${currentLanguage === 'hi' ? 'selected' : ''}>हिंदी (Hindi)</option>
+                        <option value="ta" ${currentLanguage === 'ta' ? 'selected' : ''}>தமிழ் (Tamil)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Notification Settings</h2>
+            <div class="settings-item">
+                <div>
+                    <div class="settings-label">Enable Notifications</div>
+                    <div style="color: var(--grey-text); font-size: 0.875rem; margin-top: 0.25rem;">Receive alerts and notifications</div>
+                </div>
+                <div class="settings-control">
+                    <div class="toggle-switch ${notificationSettings.enabled ? 'active' : ''}" id="notificationToggle" onclick="toggleNotificationSetting()"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Theme Mode Settings</h2>
+            <div class="settings-item">
+                <div>
+                    <div class="settings-label">Theme Mode</div>
+                    <div style="color: var(--grey-text); font-size: 0.875rem; margin-top: 0.25rem;">Switch between light and dark mode</div>
+                </div>
+                <div class="settings-control">
+                    <div class="toggle-switch ${themeMode === 'dark' ? 'active' : ''}" id="themeSettingToggle" onclick="toggleThemeFromSettings()"></div>
+                    <span style="color: var(--grey-text); font-size: 0.875rem;">${themeMode === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-section">
+            <h2>About AshaConnect PHC Dashboard</h2>
+            <p>
+                AshaConnect is a comprehensive Primary Health Centre (PHC) Dashboard designed to streamline healthcare management 
+                and improve patient care coordination. This platform enables healthcare administrators to monitor patient analytics, 
+                manage ASHA workers, track inventory, and generate comprehensive reports.
+            </p>
+            <p>
+                <strong>Version:</strong> 1.0.0<br>
+                <strong>Last Updated:</strong> January 2024<br>
+                <strong>Developed for:</strong> Primary Health Centres
+            </p>
+            <p style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                For support and inquiries, please contact your system administrator.
+            </p>
+        </div>
+    `;
+}
+
+function updateDisplayName() {
+    const newName = document.getElementById('displayNameInput').value.trim();
+    if (newName) {
+        currentAdminName = newName;
+        const adminNameEl = document.getElementById('adminName');
+        const userAvatarEl = document.getElementById('userAvatar');
+        if (adminNameEl) {
+            adminNameEl.innerText = newName;
+        }
+        if (userAvatarEl) {
+            userAvatarEl.textContent = newName.charAt(0).toUpperCase();
+        }
+        alert('Display name updated successfully!');
+    }
+}
+
+function updateLanguageSetting() {
+    const newLang = document.getElementById('languageSettingSelect').value;
+    currentLanguage = newLang;
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.value = newLang;
+    }
+    updateLanguageLabels();
+    alert('Language setting updated!');
+}
+
+function toggleNotificationSetting() {
+    notificationSettings.enabled = !notificationSettings.enabled;
+    const toggle = document.getElementById('notificationToggle');
+    if (toggle) {
+        toggle.classList.toggle('active', notificationSettings.enabled);
+    }
+    // In a real app, this would save to backend/localStorage
+    localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings));
+}
+
+function toggleThemeFromSettings() {
+    toggleTheme();
+    const toggle = document.getElementById('themeSettingToggle');
+    const label = toggle.nextElementSibling;
+    if (toggle) {
+        toggle.classList.toggle('active', themeMode === 'dark');
+    }
+    if (label) {
+        label.textContent = themeMode === 'dark' ? 'Dark Mode' : 'Light Mode';
+    }
+}
+
+window.updateDisplayName = updateDisplayName;
+window.updateLanguageSetting = updateLanguageSetting;
+window.toggleNotificationSetting = toggleNotificationSetting;
+window.toggleThemeFromSettings = toggleThemeFromSettings;
 
